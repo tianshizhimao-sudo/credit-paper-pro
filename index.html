@@ -124,7 +124,9 @@
     .deal-breaker-title { font-weight: 700; color: var(--danger); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; font-size: 12px; }
     .deal-breaker-list { list-style: none; font-size: 11px; padding-left: 0; }
     .deal-breaker-list li { padding: 3px 0 3px 20px; position: relative; }
-    .deal-breaker-list li::before { content: '⚠️'; position: absolute; left: 0; font-size: 10px; }
+    .deal-breaker-list li::before .readiness-box { background: #F8FAFF; border: 1px solid var(--info); border-radius: var(--radius-sm); padding: 10px; margin: 14px 0; }
+.readiness-title { font-size: 11px; font-weight: 700; color: var(--info); margin-bottom: 6px; }
+.readiness-list { margin: 0; padding-left: 18px; font-size: 11px; color: var(--navy-light); }{ content: '⚠️'; position: absolute; left: 0; font-size: 10px; }
     
     .preview-footer { margin-top: 30px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 10px; color: var(--muted); }
     
@@ -457,7 +459,10 @@
       <h3>Collateral / Security Risk <span class="risk-badge" id="riskColBadge">—</span></h3>
       <div id="narrativeCollateral">—</div>
       
-      <h2>Recommendation</h2>
+      <h2>Recommendation</h2> <div class="readiness-box">
+  <div class="readiness-title">Submission Readiness</div>
+  <ul class="readiness-list" id="readinessList"><li>Complete key borrower, facility, and security details to assess readiness.</li></ul>
+</div>
       <ul id="recommendationList"></ul>
       
       <div class="preview-footer">
@@ -551,7 +556,20 @@ function selectSubType(subType) {
 }
 
 function toggleChip(el) { el.classList.toggle('active'); updatePreview(); }
-function toggleRiskChip(el) { el.classList.toggle('active'); updateRiskAssessment(); }
+function toggleRiskChip(el) { el.classList.toggle('active'); updateRiskAssessment()function validateApplication() {
+  const issues = [];
+  const namedBorrowers = state.entities.filter(e => e.role === 'borrower' && e.name.trim());
+  const facilities = state.facilityGroups.flatMap(g => g.facilities || []);
+  const facilitiesWithAmount = facilities.filter(f => (parseFloat(f.amount) || 0) > 0);
+  const securitiesWithValue = state.securities.filter(s => s.type !== 'gsa' && (parseFloat(s.value) || 0) > 0);
+
+  if (!namedBorrowers.length) issues.push('Add at least one named borrowing entity.');
+  if (!facilitiesWithAmount.length) issues.push('Add at least one facility with an amount greater than zero.');
+  if (!securitiesWithValue.length) issues.push('Add at least one security with value for LVR assessment.');
+  if (state.dealBreakers.length) issues.push(`Resolve ${state.dealBreakers.length} active deal breaker(s) before submission.`);
+
+  return issues;
+}; }
 
 function toggleHousehold(show) {
   state.showHousehold = show;
@@ -971,7 +989,11 @@ function updatePreview() {
   else if (state.riskFactors.every(r => r.risk === 'low') && state.riskFactors.length > 0) overallRisk = 'low';
   
   const riskLabels = { low: 'LOW', medium: 'MEDIUM', high: 'MEDIUM-HIGH', critical: 'HIGH' };
-  document.getElementById('sumRisk').innerHTML = `<span class="risk-badge risk-${overallRisk}">${riskLabels[overallRisk]}</span>`;
+  document.getElementById('sumRisk').innerHTML = `<span class="risk-badge risk-${overallRisk}">${riskLabels[overallRisk]}</span>`const readinessIssues = validateApplication();
+const readinessList = document.getElementById('readinessList');
+readinessList.innerHTML = readinessIssues.length
+  ? readinessIssues.map(issue => `<li>${issue}</li>`).join('')
+  : '<li>Ready for submission: mandatory borrower, facility, and security fields are complete.</li>';;
   
   // Risk narratives
   const charRisks = state.riskFactors.filter(r => ['Clean credit history','Experienced management','First-time borrower','Minor credit issues','Defaults / Bankruptcy'].includes(r.text));
